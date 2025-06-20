@@ -1,52 +1,53 @@
-// build.gradle
 plugins {
-    id 'application'
+    id 'java'
+    id 'war'
 }
+
+group 'com.example'
+version '1.0'
 
 repositories {
     mavenCentral()
 }
 
+// Task to install dependencies
 task installNode(type: Exec) {
-    description = "Install Node.js dependencies"
+    description = "Install Node.js if available"
     commandLine 'sh', '-c', 'command -v node >/dev/null 2>&1 || { echo >&2 "Node.js is required"; exit 1; }'
-    onlyIf { !file('frontend/node_modules').exists() }
 }
 
 task installDeps(type: Exec, dependsOn: installNode) {
-    description = "Install frontend dependencies"
+    description = "Install npm dependencies"
     commandLine 'npm', 'install'
-    workingDir = file('frontend')
-}
-
-task startDevServer(type: Exec, dependsOn: installDeps) {
-    description = "Start development server"
-    commandLine 'npm', 'run', 'dev'
-    workingDir = file('frontend')
+    workingDir = file('.')
 }
 
 task buildApp(type: Exec, dependsOn: installDeps) {
-    description = "Build production version"
+    description = "Build production app using Vite"
     commandLine 'npm', 'run', 'build'
-    workingDir = file('frontend')
 }
 
-task previewApp(type: Exec, dependsOn: buildApp) {
-    description = "Preview built app"
-    commandLine 'npm', 'run', 'preview'
-    workingDir = file('frontend')
+task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
+    from 'dist'
+    into "$buildDir/resources/main/webapp"
+}
+
+war {
+    archiveFileName = "expense.war"
+    destinationDirectory = file("$buildDir/deploy")
+    from "$buildDir/resources/main/webapp"
 }
 
 defaultTasks 'help'
 
-task customHelp {
+task help {
     doLast {
         println """
         💡 Available Gradle Tasks:
         --------------------------
-        ./gradlew buildApp       -> Builds the production app
-        ./gradlew startDevServer -> Starts dev server
-        ./gradlew previewApp     -> Preview built app
+        ./gradlew buildApp       -> Builds the React app
+        ./gradlew war            -> Packages as WAR file
+        ./gradlew help           -> Show this message
         """
     }
 }
