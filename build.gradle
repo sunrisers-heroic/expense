@@ -38,19 +38,12 @@ task buildApp(type: Exec, dependsOn: installDeps) {
     description = "Build production version using Vite"
     commandLine 'npm', 'run', 'build'
     workingDir = file('.')
+    inputs.files file('package.json'), file('vite.config.js'), fileTree('src')
+    outputs.dir 'dist'
 }
 
 // -----------------------------
-// Task 4: Preview built app
-// -----------------------------
-task previewApp(type: Exec, dependsOn: buildApp) {
-    description = "Preview built app"
-    commandLine 'npm', 'run', 'preview'
-    workingDir = file('.')
-}
-
-// -----------------------------
-// Task 5: Copy dist/ to webapp/
+// Task 4: Copy dist/ to webapp/
 // -----------------------------
 task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
     from 'dist'
@@ -58,7 +51,7 @@ task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
 }
 
 // -----------------------------
-// Task 6: Package WAR file
+// Task 5: Package WAR file
 // -----------------------------
 war {
     archiveFileName = "expense.war"
@@ -67,20 +60,36 @@ war {
 }
 
 // -----------------------------
-// Default Task
+// Optional: Preview built app
 // -----------------------------
-defaultTasks 'build'
+task previewApp(type: Exec, dependsOn: buildApp) {
+    description = "Preview built app"
+    commandLine 'npm', 'run', 'preview'
+    workingDir = file('.')
+}
 
 // -----------------------------
-// Task 7: Define 'build' to run everything
+// Optional: Start dev server
 // -----------------------------
-task build {
-    dependsOn 'installDeps', 'buildApp', 'copyDistToWebapp', 'war'
-    doLast {
-        println """
-        ✅ Build complete!
-        - Production files: dist/
-        - WAR file: ${buildDir}/deploy/expense.war
-        """
+task runDevServer(type: Exec, dependsOn: installDeps) {
+    description = "Start development server"
+    commandLine 'npm', 'run', 'dev'
+    workingDir = file('.')
+}
+
+// -----------------------------
+// Extend default 'build' task to run everything
+// -----------------------------
+tasks.build.dependsOn 'buildApp', 'copyDistToWebapp', 'war'
+
+// -----------------------------
+// Helper method to capture command output
+// -----------------------------
+def execOutput(String... args) {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine args
+        standardOutput = stdout
     }
+    return stdout.toString()
 }
