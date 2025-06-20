@@ -1,0 +1,52 @@
+// build.gradle
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+task installNode(type: Exec) {
+    description = "Install Node.js and npm"
+    commandLine 'sh', '-c', 'command -v node || { echo >&2 "Node.js is required"; exit 1; }'
+    onlyIf { !file('node_modules').exists() }
+}
+
+task installDeps(type: Exec, dependsOn: installNode) {
+    description = "Install dependencies"
+    commandLine 'npm', 'install'
+    workingDir = project.projectDir
+}
+
+task startDevServer(type: Exec, dependsOn: installDeps) {
+    description = "Start development server"
+    commandLine 'npm', 'run', 'dev'
+    workingDir = project.projectDir
+}
+
+task buildApp(type: Exec, dependsOn: installDeps) {
+    description = "Build production version"
+    commandLine 'npm', 'run', 'build'
+    workingDir = project.projectDir
+}
+
+task previewApp(type: Exec, dependsOn: buildApp) {
+    description = "Preview built app"
+    commandLine 'npm', 'run', 'preview'
+    workingDir = project.projectDir
+}
+
+defaultTasks 'help'
+
+task help {
+    doLast {
+        println """
+        Available Gradle Tasks:
+        ------------------------
+        ./gradlew buildApp       -> Builds the production app
+        ./gradlew startDevServer -> Starts dev server
+        ./gradlew previewApp     -> Preview built app
+        """
+    }
+}
