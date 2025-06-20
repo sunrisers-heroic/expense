@@ -39,7 +39,7 @@ task previewApp(type: Exec, dependsOn: buildApp) {
 
 defaultTasks 'help'
 
-task help {
+task customHelp {
     doLast {
         println """
         💡 Available Gradle Tasks:
