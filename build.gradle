@@ -10,44 +10,77 @@ repositories {
     mavenCentral()
 }
 
-// Task to install dependencies
-task installNode(type: Exec) {
-    description = "Install Node.js if available"
-    commandLine 'sh', '-c', 'command -v node >/dev/null 2>&1 || { echo >&2 "Node.js is required"; exit 1; }'
+// -----------------------------
+// Task 1: Ensure Node.js exists
+// -----------------------------
+task installNode {
+    doLast {
+        def nodeCheck = execOutput('sh', '-c', 'command -v node >/dev/null 2>&1 && echo "found" || echo "not-found"').trim()
+        if (nodeCheck == "not-found") {
+            throw new GradleException("Node.js is required but not installed.")
+        }
+    }
 }
 
+// -----------------------------
+// Task 2: Install npm dependencies
+// -----------------------------
 task installDeps(type: Exec, dependsOn: installNode) {
-    description = "Install npm dependencies"
+    description = "Install frontend dependencies"
     commandLine 'npm', 'install'
     workingDir = file('.')
 }
 
+// -----------------------------
+// Task 3: Build production version
+// -----------------------------
 task buildApp(type: Exec, dependsOn: installDeps) {
-    description = "Build production app using Vite"
+    description = "Build production version using Vite"
     commandLine 'npm', 'run', 'build'
+    workingDir = file('.')
 }
 
+// -----------------------------
+// Task 4: Preview built app
+// -----------------------------
+task previewApp(type: Exec, dependsOn: buildApp) {
+    description = "Preview built app"
+    commandLine 'npm', 'run', 'preview'
+    workingDir = file('.')
+}
+
+// -----------------------------
+// Task 5: Copy dist/ to webapp/
+// -----------------------------
 task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
     from 'dist'
     into "$buildDir/resources/main/webapp"
 }
 
+// -----------------------------
+// Task 6: Package WAR file
+// -----------------------------
 war {
     archiveFileName = "expense.war"
     destinationDirectory = file("$buildDir/deploy")
     from "$buildDir/resources/main/webapp"
 }
 
-defaultTasks 'help'
+// -----------------------------
+// Default Task
+// -----------------------------
+defaultTasks 'build'
 
-task help {
+// -----------------------------
+// Task 7: Define 'build' to run everything
+// -----------------------------
+task build {
+    dependsOn 'installDeps', 'buildApp', 'copyDistToWebapp', 'war'
     doLast {
         println """
-        💡 Available Gradle Tasks:
-        --------------------------
-        ./gradlew buildApp       -> Builds the React app
-        ./gradlew war            -> Packages as WAR file
-        ./gradlew help           -> Show this message
+        ✅ Build complete!
+        - Production files: dist/
+        - WAR file: ${buildDir}/deploy/expense.war
         """
     }
 }
