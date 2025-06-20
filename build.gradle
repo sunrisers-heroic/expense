@@ -8,42 +8,42 @@ repositories {
 }
 
 task installNode(type: Exec) {
-    description = "Install Node.js and npm"
-    commandLine 'sh', '-c', 'command -v node || { echo >&2 "Node.js is required"; exit 1; }'
-    onlyIf { !file('node_modules').exists() }
+    description = "Install Node.js dependencies"
+    commandLine 'sh', '-c', 'command -v node >/dev/null 2>&1 || { echo >&2 "Node.js is required"; exit 1; }'
+    onlyIf { !file('frontend/node_modules').exists() }
 }
 
 task installDeps(type: Exec, dependsOn: installNode) {
-    description = "Install dependencies"
+    description = "Install frontend dependencies"
     commandLine 'npm', 'install'
-    workingDir = project.projectDir
+    workingDir = file('frontend')
 }
 
 task startDevServer(type: Exec, dependsOn: installDeps) {
     description = "Start development server"
     commandLine 'npm', 'run', 'dev'
-    workingDir = project.projectDir
+    workingDir = file('frontend')
 }
 
 task buildApp(type: Exec, dependsOn: installDeps) {
     description = "Build production version"
     commandLine 'npm', 'run', 'build'
-    workingDir = project.projectDir
+    workingDir = file('frontend')
 }
 
 task previewApp(type: Exec, dependsOn: buildApp) {
     description = "Preview built app"
     commandLine 'npm', 'run', 'preview'
-    workingDir = project.projectDir
+    workingDir = file('frontend')
 }
 
 defaultTasks 'help'
 
-task customHelp {
+task help {
     doLast {
         println """
-        Available Gradle Tasks:
-        ------------------------
+        💡 Available Gradle Tasks:
+        --------------------------
         ./gradlew buildApp       -> Builds the production app
         ./gradlew startDevServer -> Starts dev server
         ./gradlew previewApp     -> Preview built app
