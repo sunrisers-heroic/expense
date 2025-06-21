@@ -62,19 +62,33 @@ war {
 }
 
 // -----------------------------
-// Default Task: gradle build
+// Extend default 'build' task to run everything
 // -----------------------------
-defaultTasks 'build'
+tasks.build.dependsOn 'buildApp', 'copyDistToWebapp', 'war'
 
-task build {
-    dependsOn 'buildApp', 'copyDistToWebapp', 'war'
+// -----------------------------
+// Custom help task
+// -----------------------------
+task helpTask {
     doLast {
         println """
-        ✅ Build complete!
-        - Built files: dist/
-        - WAR file: ${buildDir}/deploy/expense.war
+        💡 Available Tasks:
+        --------------------------
+        gradle help       -> Show available tasks
+        gradle clean      -> Clean build files
+        gradle build      -> Install → Build → Package WAR
+        gradle war        -> Just package WAR
+        gradle buildApp   -> Just build frontend
         """
     }
+}
+
+// -----------------------------
+// Clean Task – Deletes build output
+// -----------------------------
+task clean(type: Delete) {
+    description = "Delete build folder"
+    delete buildDir
 }
 
 // -----------------------------
