@@ -10,96 +10,61 @@ repositories {
     mavenCentral()
 }
 
-// -----------------------------
-// Task 1: Ensure Node.js exists
-// -----------------------------
 task installNode {
+    description = "Ensure Node.js is available"
     doLast {
-        def nodeCheck = execOutput('sh', '-c', 'command -v node >/dev/null 2>&1 && echo "found" || echo "not-found"').trim()
+        def nodeCheck = execOutput('sh', '-c', 'command -v node >/dev/null 2>&1 && echo found || echo not-found').trim()
         if (nodeCheck == "not-found") {
             throw new GradleException("Node.js is required but not installed.")
         }
     }
 }
 
-// -----------------------------
-// Task 2: Install npm dependencies
-// -----------------------------
-task installDeps(type: Exec) {
-    description = "Install frontend dependencies"
+task installDeps(type: Exec, dependsOn: installNode) {
+    description = "Install npm dependencies"
     commandLine 'npm', 'install'
     workingDir = file('.')
-    inputs.file('package.json')
-    outputs.dir('node_modules')
 }
 
-// -----------------------------
-// Task 3: Build production version with Vite
-// -----------------------------
 task buildApp(type: Exec, dependsOn: installDeps) {
     description = "Build production version using Vite"
     commandLine 'npm', 'run', 'build'
     workingDir = file('.')
-    inputs.files file('package.json'), file('vite.config.js')
-    inputs.dir('src').withPropertyName("sourceDir").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir('dist')
+    inputs.files file('package.json'), file('vite.config.js'), fileTree('src')
+    outputs.dir 'dist'
 }
 
-// -----------------------------
-// Task 4: Copy dist/ to webapp/
-// -----------------------------
 task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
+    description = "Copy dist/ to WAR webapp directory"
     from 'dist'
     into "$buildDir/resources/main/webapp"
-    includeEmptyDirs = false
 }
 
-// -----------------------------
-// Task 5: Package WAR file
-// -----------------------------
 war {
     archiveFileName = "expense.war"
     destinationDirectory = file("$buildDir/deploy")
     from "$buildDir/resources/main/webapp"
 }
 
-// -----------------------------
-// Optional: Preview built app
-// -----------------------------
-task previewApp(type: Exec, dependsOn: buildApp) {
-    description = "Preview built app"
-    commandLine 'npm', 'run', 'preview'
-    workingDir = file('.')
+defaultTasks 'help'
+
+task help {
+    doLast {
+        println """
+        💡 Available Gradle Tasks:
+        --------------------------
+        ./gradlew war          -> Build WAR file
+        ./gradlew buildApp    -> Build React/Vite frontend only
+        ./gradlew copyDistToWebapp -> Copy dist/ to WAR resources
+        """
+    }
 }
 
-// -----------------------------
-// Optional: Start dev server
-// -----------------------------
-task runDevServer(type: Exec, dependsOn: installDeps) {
-    description = "Start development server"
-    commandLine 'npm', 'run', 'dev'
-    workingDir = file('.')
-}
-
-// -----------------------------
-// Extend default 'build' task
-// -----------------------------
-tasks.build.dependsOn war
-tasks.assemble.dependsOn war
-
-// Only run frontend tasks when explicitly requested
-project.tasks.named('war').configure {
-    dependsOn copyDistToWebapp
-}
-
-// -----------------------------
-// Helper method to capture command output
-// -----------------------------
 def execOutput(String... args) {
     def stdout = new ByteArrayOutputStream()
     exec {
         commandLine args
         standardOutput = stdout
     }
-    return stdout.toString()
+    return stdout.toString().trim()
 }
