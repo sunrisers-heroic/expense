@@ -62,9 +62,9 @@ war {
 }
 
 // -----------------------------
-// Extend default 'build' task to run everything
+// Ensure correct task order
 // -----------------------------
-tasks.build.dependsOn 'buildApp', 'copyDistToWebapp', 'war'
+tasks.war.dependsOn copyDistToWebapp
 
 // -----------------------------
 // Custom help task
@@ -75,7 +75,7 @@ task helpTask {
         💡 Available Tasks:
         --------------------------
         gradle help       -> Show available tasks
-        gradle clean      -> Clean build files (built-in)
+        gradle clean      -> Clean old builds (built-in)
         gradle build      -> Install → Build → Package WAR
         gradle war        -> Just package WAR
         gradle buildApp   -> Just build frontend
