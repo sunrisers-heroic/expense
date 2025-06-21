@@ -25,21 +25,24 @@ task installNode {
 // -----------------------------
 // Task 2: Install npm dependencies
 // -----------------------------
-task installDeps(type: Exec, dependsOn: installNode) {
+task installDeps(type: Exec) {
     description = "Install frontend dependencies"
     commandLine 'npm', 'install'
     workingDir = file('.')
+    inputs.file('package.json')
+    outputs.dir('node_modules')
 }
 
 // -----------------------------
-// Task 3: Build production version
+// Task 3: Build production version with Vite
 // -----------------------------
 task buildApp(type: Exec, dependsOn: installDeps) {
     description = "Build production version using Vite"
     commandLine 'npm', 'run', 'build'
     workingDir = file('.')
-    inputs.files file('package.json'), file('vite.config.js'), fileTree('src')
-    outputs.dir 'dist'
+    inputs.files file('package.json'), file('vite.config.js')
+    inputs.dir('src').withPropertyName("sourceDir").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir('dist')
 }
 
 // -----------------------------
@@ -48,6 +51,7 @@ task buildApp(type: Exec, dependsOn: installDeps) {
 task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
     from 'dist'
     into "$buildDir/resources/main/webapp"
+    includeEmptyDirs = false
 }
 
 // -----------------------------
@@ -78,9 +82,15 @@ task runDevServer(type: Exec, dependsOn: installDeps) {
 }
 
 // -----------------------------
-// Extend default 'build' task to run everything
+// Extend default 'build' task
 // -----------------------------
-tasks.build.dependsOn 'buildApp', 'copyDistToWebapp', 'war'
+tasks.build.dependsOn war
+tasks.assemble.dependsOn war
+
+// Only run frontend tasks when explicitly requested
+project.tasks.named('war').configure {
+    dependsOn copyDistToWebapp
+}
 
 // -----------------------------
 // Helper method to capture command output
