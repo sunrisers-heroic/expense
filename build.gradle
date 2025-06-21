@@ -10,8 +10,11 @@ repositories {
     mavenCentral()
 }
 
+// -----------------------------
+// Task 1: Check if Node.js exists
+// -----------------------------
 task installNode {
-    description = "Ensure Node.js is available"
+    description = "Ensure Node.js is installed"
     doLast {
         def nodeCheck = execOutput('sh', '-c', 'command -v node >/dev/null 2>&1 && echo found || echo not-found').trim()
         if (nodeCheck == "not-found") {
@@ -20,12 +23,18 @@ task installNode {
     }
 }
 
+// -----------------------------
+// Task 2: Install npm dependencies
+// -----------------------------
 task installDeps(type: Exec, dependsOn: installNode) {
-    description = "Install npm dependencies"
+    description = "Install frontend dependencies"
     commandLine 'npm', 'install'
     workingDir = file('.')
 }
 
+// -----------------------------
+// Task 3: Build React/Vite App
+// -----------------------------
 task buildApp(type: Exec, dependsOn: installDeps) {
     description = "Build production version using Vite"
     commandLine 'npm', 'run', 'build'
@@ -34,32 +43,43 @@ task buildApp(type: Exec, dependsOn: installDeps) {
     outputs.dir 'dist'
 }
 
+// -----------------------------
+// Task 4: Copy dist to webapp folder for WAR
+// -----------------------------
 task copyDistToWebapp(type: Copy, dependsOn: buildApp) {
-    description = "Copy dist/ to WAR webapp directory"
+    description = "Copy built files to WAR source directory"
     from 'dist'
     into "$buildDir/resources/main/webapp"
 }
 
+// -----------------------------
+// Task 5: Package WAR file
+// -----------------------------
 war {
     archiveFileName = "expense.war"
     destinationDirectory = file("$buildDir/deploy")
     from "$buildDir/resources/main/webapp"
 }
 
-defaultTasks 'help'
+// -----------------------------
+// Default Task: gradle build
+// -----------------------------
+defaultTasks 'build'
 
-task help {
+task build {
+    dependsOn 'buildApp', 'copyDistToWebapp', 'war'
     doLast {
         println """
-        💡 Available Gradle Tasks:
-        --------------------------
-        ./gradlew war          -> Build WAR file
-        ./gradlew buildApp    -> Build React/Vite frontend only
-        ./gradlew copyDistToWebapp -> Copy dist/ to WAR resources
+        ✅ Build complete!
+        - Built files: dist/
+        - WAR file: ${buildDir}/deploy/expense.war
         """
     }
 }
 
+// -----------------------------
+// Helper method to capture shell output
+// -----------------------------
 def execOutput(String... args) {
     def stdout = new ByteArrayOutputStream()
     exec {
